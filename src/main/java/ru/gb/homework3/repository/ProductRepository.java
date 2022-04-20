@@ -1,45 +1,48 @@
 package ru.gb.homework3.repository;
 
-import org.springframework.stereotype.Component;
-import ru.gb.homework3.model.Product;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+import ru.gb.homework3.entity.Product;
 
-import javax.annotation.PostConstruct;
-import java.util.ArrayList;
-import java.util.List;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.TypedQuery;
 
-@Component
+@Repository
+@Transactional
 public class ProductRepository {
 
-    List<Product> productList = new ArrayList<>();
-    int index;
+    @PersistenceContext
+    private EntityManager entityManager;
 
-    public Product saveProduct(Product product) {
-        product.setId(index++);
-        productList.add(product);
+    public Iterable<Product> findAll() {
+        return entityManager.createQuery("select p from Product p").getResultList();
+    }
+
+    public Product findById(Long id) {
+        TypedQuery<Product> namedQuery = entityManager.createNamedQuery("Product.findById", Product.class);
+        namedQuery.setParameter("id", id);
+        return namedQuery.getSingleResult();
+    }
+
+    public Product save(Product product) {
+        if (product.getId() == null) {
+            entityManager.persist(product);
+        } else {
+            entityManager.merge(product);
+        }
         return product;
     }
 
-    public List<Product> allProductList(){
-        return productList;
+    public void deleteById(Integer id) {
+        Product product = new Product();
+        product.setId(id);
+        delete(product);
     }
 
-    public Product findProductById(int id){
-        for (Product p : productList) {
-            if (p.getId() == id) {
-                return p;
-            }
-        }
-        throw new RuntimeException("Товар не нейден");
-    }
-
-    public void deleteProductById(Integer id) {
-        if (id < productList.size()) {
-            for (Product p : productList) {
-                if (p.getId() == id) {
-                    productList.remove(p);
-                    return;
-                }
-            }
-        }
+    public void delete(Product product) {
+        Product mergedProduct = entityManager.merge(product);
+        entityManager.remove(mergedProduct);
     }
 }
+
